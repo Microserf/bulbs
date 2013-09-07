@@ -63,26 +63,24 @@ class Graph(object):
         """
         Returns a list of all the vertices in the graph.
 
-        :rtype: list or None
+        :rtype: list
 
         """
         resp = self.client.get_all_vertices()
-        if resp.total_size > 0:
-            vertices = initialize_elements(self.client, resp)
-            return list(vertices)
+        vertices = initialize_elements(self.client, resp)
+        return list(vertices)
    
     @property
     def E(self):
         """
         Returns a list of all the edges in the graph.
 
-        :rtype: list or None
+        :rtype: list
 
         """
         resp = self.client.get_all_edges()
-        if resp.total_size > 0:
-            edges = initialize_elements(self.client, resp)
-            return list(edges)
+        edges = initialize_elements(self.client, resp)
+        return list(edges)
         
     def add_proxy(self, proxy_name, element_class, index_class=None):
         """

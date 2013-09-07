@@ -54,14 +54,14 @@ log = get_logger(__name__)
 #
 
 
-def initialize_elements(client,response):
+def initialize_elements(client, response):
     # return None if there were no results; otherwise,
     # return a generator of initialized elements.
     if response.total_size > 0:
-        # yield doesn't work for conditionals
-        return (initialize_element(client, result) for result in response.results)
+        for result in response.results:
+            yield initialize_element(client, result)
 
-def initialize_element(client,result):
+def initialize_element(client, result):
     # result should be a single Result object, not a list or generator
     element_class = get_element_class(client,result)
     element = element_class(client)
