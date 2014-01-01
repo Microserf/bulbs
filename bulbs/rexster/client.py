@@ -21,7 +21,7 @@ from bulbs.utils import json, build_path, get_file_path, urlsplit, coerce_id
 
 
 # The default URIs
-REXSTER_URI = "http://localhost:8182/graphs/tinkergraph"
+REXSTER_URI = "http://localhost:8182/graphs/emptygraph"  # emptygraph has mock-tx enabled 
 SAIL_URI = "http://localhost:8182/graphs/sailgraph"
 
 # The logger defined in Config
@@ -321,7 +321,7 @@ class RexsterClient(Client):
         self.request = self.request_class(self.config, self.type_system.content_type)
 
         # Rexster supports Gremlin so include the Gremlin-Groovy script library
-        self.scripts = GroovyScripts() 
+        self.scripts = GroovyScripts(self.config) 
 
         # Also include the Rexster-specific Gremlin-Groovy scripts
         scripts_file = get_file_path(__file__, "gremlin.groovy")
@@ -337,7 +337,7 @@ class RexsterClient(Client):
 
     # Gremlin
 
-    def gremlin(self, script, params=None): 
+    def gremlin(self, script, params=None, load=None): 
         """
         Executes a Gremlin script and returns the Response.
 
@@ -350,13 +350,15 @@ class RexsterClient(Client):
         :rtype: RexsterResponse
 
         """
-        params = dict(script=script,params=params)
-        return self.request.post(gremlin_path,params)
+        params = dict(script=script, params=params)
+        if self.config.server_scripts is True:
+            params["load"] = load or [self.scripts.default_namespace]
+        return self.request.post(gremlin_path, params)
 
 
     # Vertex Proxy
 
-    def create_vertex(self, data):
+    def create_vertex(self, data, keys=None):
         """
         Creates a vertex and returns the Response.
 
@@ -366,8 +368,11 @@ class RexsterClient(Client):
         :rtype: RexsterResponse
 
         """
+        if keys or self.config.autoindex is True:
+            index_name = self.config.vertex_index
+            return self.create_indexed_vertex(data, index_name, keys=keys)
         data = self._remove_null_values(data)
-        return self.request.post(vertex_path,data)
+        return self.request.post(vertex_path, data)
 
     def get_vertex(self, _id):
         """
@@ -393,7 +398,7 @@ class RexsterClient(Client):
         params = None
         return self.gremlin(script, params)
 
-    def update_vertex(self, _id, data):
+    def update_vertex(self, _id, data, keys=None):
         """
         Updates the vertex with the _id and returns the Response.
 
@@ -425,7 +430,7 @@ class RexsterClient(Client):
 
     # Edge Proxy
 
-    def create_edge(self, outV, label, inV, data={}): 
+    def create_edge(self, outV, label, inV, data={}, keys=None): 
         """
         Creates a edge and returns the Response.
         
@@ -444,6 +449,9 @@ class RexsterClient(Client):
         :rtype: RexsterResponse
 
         """
+        if keys or self.config.autoindex is True:
+            index_name = self.config.edge_index
+            return self.create_indexed_edge(outV,label,inV,data,index_name,keys=keys)
         data = self._remove_null_values(data)
         edge_data = dict(_outV=outV,_label=label,_inV=inV)
         data.update(edge_data)
@@ -473,7 +481,7 @@ class RexsterClient(Client):
         params = None
         return self.gremlin(script, params)
 
-    def update_edge(self,_id,data):
+    def update_edge(self,_id, data, keys=None):
         """
         Updates the edge with the _id and returns the Response.
 
@@ -919,7 +927,9 @@ class RexsterClient(Client):
         data = self._remove_null_values(data)
         params = dict(data=data,index_name=index_name,keys=keys)
         script = self.scripts.get("create_indexed_vertex")
-        return self.gremlin(script,params)
+        resp = self.gremlin(script,params)
+        resp.results = resp.one()
+        return resp
     
     def update_indexed_vertex(self, _id, data, index_name, keys=None):
         """
@@ -977,7 +987,9 @@ class RexsterClient(Client):
         params = dict(data=data,index_name=index_name,keys=keys)
         params.update(edge_params)
         script = self.scripts.get("create_indexed_edge")
-        return self.gremlin(script,params)
+        resp = self.gremlin(script,params)
+        resp.results = resp.one()
+        return resp
         
     def update_indexed_edge(self, _id, data, index_name, keys=None):
         """

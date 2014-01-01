@@ -48,6 +48,14 @@ class VertexProxyTestCase(BulbsTestCase):
         j2 = self.vertices.get(james._id)
         assert j2 == None
 
+    def test_ascii_encoding(self):
+        # http://stackoverflow.com/questions/19824952/unicodeencodeerror-bulbs-and-neo4j-create-model
+        data = {u'name': u'Aname M\xf6ller'}
+        v1a = self.vertices.create(data)
+        v1b = self.vertices.get(v1a._id)
+        assert v1b.name == data['name']
+
+
 
 class VertexTestCase(BulbsTestCase):
     

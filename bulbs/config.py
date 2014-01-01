@@ -4,7 +4,7 @@
 # BSD License (see LICENSE for details)
 #
 import os
-from .utils import get_logger, urlparse
+from .utils import bulbs_logger, get_logger, urlparse
 from logging import StreamHandler, DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 log = get_logger(__name__)
@@ -35,6 +35,7 @@ class Config(object):
     :ivar vertex_index: Name of the vertex index. Defaults to "vertex". 
     :ivar edge_index: Name of the edge index. Defaults to "edge". 
     :ivar autoindex: Enable auto indexing. Defaults to True.
+    :ivar server_scripts: Scripts are defined server side. Defaults to False.
 
     Example:
 
@@ -58,7 +59,8 @@ class Config(object):
         self.type_system = "json" 
         self.vertex_index = "vertex"
         self.edge_index = "edge"
-        self.autoindex = True
+        self.autoindex = True         # Titan Client sets autoindex to false
+        self.server_scripts = False
         
         # Set the default log level and log handler
         self.set_logger(self.log_level, self.log_handler)
@@ -80,11 +82,11 @@ class Config(object):
         :rtype: None
 
         """
-        log = get_logger(__name__)
-        log.setLevel(log_level)
+        #log = get_logger(__name__)
+        bulbs_logger.setLevel(log_level)
         self.log_level = log_level 
         if log_handler is not None:
-            log.addHandler(log_handler())
+            bulbs_logger.addHandler(log_handler())
 
     def set_neo4j_heroku(self, log_level=ERROR, log_handler=None):
         """

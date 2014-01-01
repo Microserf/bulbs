@@ -7,24 +7,29 @@ import os
 import sys
 import inspect
 import logging
+import numbers
+import codecs
 
+import six  # Python 3
 import time
 import datetime
 import calendar
 import omnijson as json # supports Python 2.5-3.2
+
 
 #
 # Python 3 
 #
 
 if sys.version < '3':
-    import codecs
 #    import ujson as json
     from urllib import quote, quote_plus, urlencode
     from urlparse import urlsplit, urlparse
 
-    def u(x):
-        return codecs.unicode_escape_decode(x)[0]
+    # def u(x):
+    #     return codecs.unicode_escape_decode(x)[0]
+
+                
 else:
     # ujson is faster but hasn't been ported to Python 3 yet
 #    import json
@@ -34,15 +39,28 @@ else:
     long = int
     unicode = str
 
-    def u(x):
-        return x
+    # def u(x):
+    #     return x
+
+# NOTE: now using the same unicode func for both Python 2 and Python 3
+# http://stackoverflow.com/questions/6625782/unicode-literals-that-work-in-python-3-and-2
+# Unicode - see Armin's http://lucumr.pocoo.org/2013/7/2/the-updated-guide-to-unicode/
+def u(x):
+    byte_string, length = codecs.unicode_escape_encode(x)
+    unicode_string, length = codecs.unicode_escape_decode(byte_string)
+    return unicode_string
+
+
 
 #
 # Logging
 #
 
-def get_logger(name,level=None):
-    logger = logging.getLogger(name)
+bulbs_logger = logging.getLogger('bulbs')
+
+def get_logger(name, level=None):
+    #logger = logging.getLogger(name)
+    logger = bulbs_logger.getChild(name)
     if level:
         logger.setLevel(level)
     return logger
@@ -121,13 +139,45 @@ def get_key_value(key, value, pair):
 # Client Utils
 #
 
+
 def build_path(*args):
     # don't include segment if it's None
-    # quote_plus doesn't work for neo4j index lookups 
-    # e.g., index/node/test_idxV/name/James+Thornton
-    segments = [quote(unicode(segment).decode('utf-8').encode('utf-8'), safe='') for segment in args if segment is not None]
+    # quote_plus doesn't work for neo4j index lookups;
+    # for example, this won't work: index/node/test_idxV/name/James+Thornton
+    segments = [quote(to_bytes(segment), safe='') for segment in args if segment is not None]
     path = "/".join(segments)
     return path
+
+def to_bytes(value):
+    # urllib does not handle Unicode at all. 
+    # URLs don't contain non-ASCII characters, by definition. 
+    # When you're dealing with urllib you should use only byte strings. 
+    # http://stackoverflow.com/a/5605354/161085
+    string_value = to_string(value)             # may have been numeric
+    unicode_value = u(string_value)             # ensure unicode
+    byte_string = unicode_value.encode('utf8')  # encode as utf8 bytestring
+    return byte_string
+
+def to_string(value):
+    # maybe convert a number to a string
+    return value if not isinstance(value, numbers.Number) else str(value)
+   
+def encode_value(value):
+    return value.encode('utf-8') if isinstance(value, str) else value
+
+def is_string(value):
+    return isinstance(value, six.string_types)
+
+def encode_dict(d):
+    for key in d:
+        val = d.pop(key)
+        #key = encode_value(key)
+        #d[key] = encode_value(val)
+        key = to_bytes(key) if is_string(key) else key
+        d[key] = to_bytes(val) if is_string(val) else val
+    return d
+        
+
 
 #
 # Time Utils
