@@ -575,6 +575,8 @@ class VertexProxy(object):
         :rtype: Vertex or None
 
         """
+        if _id is None:
+            return None
         try:
             resp = self.client.get_vertex(_id)
             return initialize_element(self.client, resp.results)
