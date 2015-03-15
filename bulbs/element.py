@@ -244,6 +244,16 @@ class Element(object):
                 element._id == self._id and
                 element._data == self._data)
 
+    def __hash__(self):
+        """
+        Returns a unique hash identifier for the element.
+
+        :rtype int
+
+        """
+        return hash(self.__class__) ^ \
+               hash(self._id)
+
     def __ne__(self, element):
         """
         Returns True if the elements are not equal.
